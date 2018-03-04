@@ -9,9 +9,14 @@
 
 class Bot: public Enki::EPuck {
 public:
+    Enki::CircularCam highCamera;
     Bot();
     void controlStep(double dt) override;
-    double getCameraAverage(int rgba);
+    double getLowCameraAverage(int rgba);
+    double getHighCameraAverage(int rgba);
+
+private:
+    double getCameraAverage(int rgba, Enki::CircularCam camera);
 };
 
 

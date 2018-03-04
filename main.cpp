@@ -19,8 +19,8 @@ int main(int argc, char *argv[]) {
     auto *bot = new Bot;
     bot->pos = Point(20, 20);
     world.addObject(bot);
-    bot->rightSpeed = 1;
-    bot->leftSpeed = -1;
+    bot->rightSpeed = 0;
+    bot->leftSpeed = 0;
 
     auto *bottomWall = new PhysicalObject;
     bottomWall->setRectangular(worldWidth, 0.1, 10, -1);
@@ -47,9 +47,9 @@ int main(int argc, char *argv[]) {
 
     auto *redThing = new PhysicalObject;
     redThing->setColor(Color(1, 0, 0));
-    redThing->setCylindric(3, 10, -1);
+    redThing->setCylindric(2.5, 2.5, 1);
     redThing->pos = Point(worldWidth / 2, 3);
-//    world.addObject(redThing);
+    world.addObject(redThing);
 
     ViewerWidget viewer(&world);
     viewer.show();
