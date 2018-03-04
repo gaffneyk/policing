@@ -11,7 +11,7 @@ class Bot: public Enki::EPuck {
 public:
     Bot();
     void controlStep(double dt) override;
-    double getCameraAverage(int rgb);
+    double getCameraAverage(int rgba);
 };
 
 

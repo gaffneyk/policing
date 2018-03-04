@@ -14,22 +14,17 @@ Bot::Bot(): EPuck(CAPABILITY_CAMERA) {
 
 void Bot::controlStep(double dt) {
     EPuck::controlStep(dt);
-    cout << this->getCameraAverage(1) << endl;
+    cout << this->getCameraAverage(0) << endl;
 }
 
-double Bot::getCameraAverage(int rgb) {
+double Bot::getCameraAverage(int rgba) {
+    if (rgba < 0 || rgba > 3) {
+        return 0;
+    }
+
     double sum = 0;
     for (Color color : this->camera.image) {
-        switch(rgb) {
-            case 0:
-                sum += color.r();
-            case 1:
-                sum += color.g();
-            case 2:
-                sum += color.b();
-            default:
-                break;
-        }
+        sum += color.components[rgba];
     }
     return sum / this->camera.image.size();
 }

@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     redThing->setColor(Color(1, 0, 0));
     redThing->setCylindric(3, 10, -1);
     redThing->pos = Point(worldWidth / 2, 3);
-    world.addObject(redThing);
+//    world.addObject(redThing);
 
     ViewerWidget viewer(&world);
     viewer.show();
