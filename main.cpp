@@ -7,6 +7,15 @@
 using namespace Enki;
 using namespace std;
 
+
+void addWall(Color color, double sizeX, double sizeY, Point position, World* world) {
+    auto *wall = new PhysicalObject;
+    wall->setColor(color);
+    wall->setRectangular(sizeX, sizeY, 10, -1);
+    wall->pos = position;
+    world->addObject(wall);
+}
+
 int main(int argc, char *argv[]) {
 
     const int worldWidth = 100;
@@ -22,34 +31,10 @@ int main(int argc, char *argv[]) {
     bot->rightSpeed = 0;
     bot->leftSpeed = 0;
 
-    auto *bottomWall = new PhysicalObject;
-    bottomWall->setRectangular(worldWidth, 0.1, 10, -1);
-    bottomWall->pos = Point(0, 0);
-    world.addObject(bottomWall);
-
-    auto *topWall = new PhysicalObject;
-    topWall->setColor(Color(1, 0, 0));
-    topWall->setRectangular(worldWidth, 0.1, 10, -1);
-    topWall->pos = Point(0, worldHeight);
-    world.addObject(topWall);
-
-    auto *leftWall = new PhysicalObject;
-    leftWall->setColor(Color(0, 1, 0));
-    leftWall->setRectangular(0.1, worldHeight, 10, -1);
-    leftWall->pos = Point(0, 0);
-    world.addObject(leftWall);
-
-    auto *rightWall = new PhysicalObject;
-    rightWall->setColor(Color(0, 0, 1));
-    rightWall->setRectangular(0.1, worldHeight, 10, -1);
-    rightWall->pos = Point(worldWidth, 0);
-    world.addObject(rightWall);
-
-    auto *redThing = new PhysicalObject;
-    redThing->setColor(Color(1, 0, 0));
-    redThing->setCylindric(2.5, 2.5, 1);
-    redThing->pos = Point(worldWidth / 2, 3);
-    world.addObject(redThing);
+    addWall(Color(1, 1, 1), worldWidth, 0.1, Point(0, worldHeight), &world); // Top wall
+    addWall(Color(0, 0, 0), worldWidth, 0.1, Point(0, 0), &world); // Bottom wall
+    addWall(Color(0, 0, 0), 0.1, worldHeight, Point(worldWidth, 0), &world); // Right wall
+    addWall(Color(0, 0, 0), 0.1, worldHeight, Point(0, 0), &world); // Left wall
 
     ViewerWidget viewer(&world);
     viewer.show();

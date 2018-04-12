@@ -9,14 +9,18 @@
 
 class Bot: public Enki::EPuck {
 public:
-    Enki::CircularCam highCamera;
     Bot();
     void controlStep(double dt) override;
-    double getLowCameraAverage(int rgba);
-    double getHighCameraAverage(int rgba);
+    double getFrontFrontLeftInfraredValue();
+    double getFrontFrontRightInfraredValue();
+    double getFrontLeftInfraredValue();
+    double getFrontRightInfraredValue();
+    double getLeftCameraValue();
+    double getRightCameraValue();
 
 private:
-    double getCameraAverage(int rgba, Enki::CircularCam camera);
+    double getInfraredValue(Enki::IRSensor irSensor);
+    double getCameraValue(std::valarray<Enki::Color> image);
 };
 
 

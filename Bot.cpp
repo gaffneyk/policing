@@ -9,32 +9,49 @@ using namespace Enki;
 using namespace std;
 
 Bot::Bot():
-        EPuck(CAPABILITY_CAMERA),
-        highCamera(this, Vector(3.7, 0), 3, 0, M_PI/6, 60) {
-    addLocalInteraction(&highCamera);
+        EPuck(CAPABILITY_BASIC_SENSORS | CAPABILITY_CAMERA) {
     setColor(Color(1, 1, 1));
 };
 
 void Bot::controlStep(double dt) {
     EPuck::controlStep(dt);
-    cout << getLowCameraAverage(0) << endl;
 }
 
-double Bot::getLowCameraAverage(int rgba) {
-    return getCameraAverage(rgba, camera);
+double Bot::getFrontFrontLeftInfraredValue() {
+    return getInfraredValue(this->infraredSensor7);
 }
 
-double Bot::getHighCameraAverage(int rgba) {
-    return getCameraAverage(rgba, highCamera);
+double Bot::getFrontFrontRightInfraredValue() {
+    return getInfraredValue(this->infraredSensor0);
 }
 
-double Bot::getCameraAverage(int rgba, Enki::CircularCam camera) {
-    if (rgba < 0 || rgba > 3) {
-        return 0;
-    }
+double Bot::getFrontLeftInfraredValue() {
+    return getInfraredValue(this->infraredSensor6);
+}
+
+double Bot::getFrontRightInfraredValue() {
+    return getInfraredValue(this->infraredSensor1);
+}
+
+double Bot::getLeftCameraValue() {
+    auto image = this->camera.image;
+    return getCameraValue(image[slice(image.size() / 2, image.size() / 2, 1)]);
+}
+
+double Bot::getRightCameraValue() {
+    auto image = this->camera.image;
+    return getCameraValue(image[slice(0, image.size() / 2, 1)]);
+}
+
+double Bot::getInfraredValue(Enki::IRSensor irSensor) {
+    return irSensor.getDist() / irSensor.getRange();
+}
+
+double Bot::getCameraValue(valarray<Color> image) {
     double sum = 0;
-    for (Color color : camera.image) {
-        sum += color.components[rgba];
+    for (Color color : image) {
+        sum += color.toGray();
     }
-    return sum / camera.image.size();
+    return sum / image.size();
 }
+
