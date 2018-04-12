@@ -16,6 +16,11 @@ void addWall(Color color, double sizeX, double sizeY, Point position, World* wor
     world->addObject(wall);
 }
 
+void addBot(World* world) {
+    auto *bot = new Bot;
+    world->addObject(bot);
+}
+
 int main(int argc, char *argv[]) {
 
     const int worldWidth = 100;
@@ -25,11 +30,9 @@ int main(int argc, char *argv[]) {
 
     World world(worldWidth, worldHeight, Color(1, 1, 1), World::GroundTexture());
 
-    auto *bot = new Bot;
-    bot->pos = Point(20, 20);
-    world.addObject(bot);
-    bot->rightSpeed = 0;
-    bot->leftSpeed = 0;
+    for (int i = 0; i < 8; ++i) {
+        addBot(&world);
+    }
 
     addWall(Color(1, 1, 1), worldWidth, 0.1, Point(0, worldHeight), &world); // Top wall
     addWall(Color(0, 0, 0), worldWidth, 0.1, Point(0, 0), &world); // Bottom wall

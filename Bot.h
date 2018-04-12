@@ -6,19 +6,21 @@
 #define HAPLODIPLO_BOT_H
 
 #include <enki/robots/e-puck/EPuck.h>
+#include "Controller.h"
 
 class Bot: public Enki::EPuck {
 public:
     Bot();
     void controlStep(double dt) override;
+    double getFrontLeftInfraredValue();
     double getFrontFrontLeftInfraredValue();
     double getFrontFrontRightInfraredValue();
-    double getFrontLeftInfraredValue();
     double getFrontRightInfraredValue();
     double getLeftCameraValue();
     double getRightCameraValue();
 
 private:
+    Controller controller;
     double getInfraredValue(Enki::IRSensor irSensor);
     double getCameraValue(std::valarray<Enki::Color> image);
 };

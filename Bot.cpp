@@ -15,6 +15,16 @@ Bot::Bot():
 
 void Bot::controlStep(double dt) {
     EPuck::controlStep(dt);
+    double controls[3];
+    controller.control(getFrontLeftInfraredValue(), getFrontFrontLeftInfraredValue(),
+                       getFrontFrontRightInfraredValue(), getFrontRightInfraredValue(),
+                       getLeftCameraValue(), getRightCameraValue(), controls);
+    leftSpeed = maxSpeed * controls[0];
+    rightSpeed = maxSpeed * controls[1];
+}
+
+double Bot::getFrontLeftInfraredValue() {
+    return getInfraredValue(this->infraredSensor6);
 }
 
 double Bot::getFrontFrontLeftInfraredValue() {
@@ -23,10 +33,6 @@ double Bot::getFrontFrontLeftInfraredValue() {
 
 double Bot::getFrontFrontRightInfraredValue() {
     return getInfraredValue(this->infraredSensor0);
-}
-
-double Bot::getFrontLeftInfraredValue() {
-    return getInfraredValue(this->infraredSensor6);
 }
 
 double Bot::getFrontRightInfraredValue() {
@@ -44,7 +50,7 @@ double Bot::getRightCameraValue() {
 }
 
 double Bot::getInfraredValue(Enki::IRSensor irSensor) {
-    return irSensor.getDist() / irSensor.getRange();
+    return irSensor.getDist() / irSensor.getRange() * 2 - 1;
 }
 
 double Bot::getCameraValue(valarray<Color> image) {
@@ -52,6 +58,6 @@ double Bot::getCameraValue(valarray<Color> image) {
     for (Color color : image) {
         sum += color.toGray();
     }
-    return sum / image.size();
+    return sum / image.size() * 2 - 1;
 }
 
