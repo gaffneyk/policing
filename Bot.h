@@ -11,18 +11,20 @@
 class Bot: public Enki::EPuck {
 public:
     Bot();
+    Bot(Bot &obj);
     void controlStep(double dt) override;
-    double getFrontLeftInfraredValue();
-    double getFrontFrontLeftInfraredValue();
-    double getFrontFrontRightInfraredValue();
-    double getFrontRightInfraredValue();
-    double getLeftCameraValue();
-    double getRightCameraValue();
+    double getLeftCameraValue(int rgb);
+    double getRightCameraValue(int rgb);
+    void increaseFitnessScore(double amount);
+    double getFitnessScore();
+    bool getShouldShareToken();
+    Controller* getController();
 
 private:
-    Controller controller;
-    double getInfraredValue(Enki::IRSensor irSensor);
-    double getCameraValue(std::valarray<Enki::Color> image);
+    Controller *controller;
+    double fitnessScore;
+    double getCameraValue(std::valarray<Enki::Color> image, int rgb);
+    bool shouldShareToken;
 };
 
 

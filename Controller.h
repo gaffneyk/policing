@@ -5,15 +5,21 @@
 #ifndef HAPLODIPLO_CONTROLLER_H
 #define HAPLODIPLO_CONTROLLER_H
 
+#include <iostream>
+#include <bitset>
 
 class Controller {
 public:
     Controller();
-    void control(double frontLeftInfraredValue, double frontFrontLeftInfraredValue,
-                   double frontFrontRightInfraredValue, double frontRightInfraredValue,
-                   double leftCameraValue, double rightCameraValue, double *controls);
+    Controller(const unsigned int *genome);
+    void control(double leftCameraValueR, double leftCameraValueG,
+                   double leftCameraValueB, double rightCameraValueR,
+                   double rightCameraValueG, double rightCameraValue, double *controls);
+    unsigned int* getGenome();
+    std::vector<std::bitset<8>> getBinaryGenome();
+    void setBinaryGenome(std::vector<std::bitset<8>> binaryGenome);
 private:
-    int genome[33];
+    unsigned int genome[33];
 };
 
 

@@ -3,7 +3,7 @@ project(haplodiplo)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(haplodiplo main.cpp Bot.cpp Bot.h Controller.cpp Controller.h)
+add_executable(haplodiplo main.cpp Bot.cpp Bot.h Controller.cpp Controller.h Token.cpp Token.h)
 
 set(enki_DIR /Users/kevingaffney/Development/enki)
 set(Qt5Core_DIR /usr/local/Cellar/qt/5.10.0_1/lib/cmake/Qt5Core)
