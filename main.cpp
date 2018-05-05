@@ -4,11 +4,20 @@
 #include <viewer/Viewer.h>
 #include <QApplication>
 #include <random>
+#include <string>
 #include <fstream>
 #include <sstream>
 #include <chrono>
+//#include <pthread.h>
+#include <future>
 #include "Bot.h"
 #include "Token.h"
+
+#define NUM_GROUPS 5
+#define NUM_GENERATIONS 1
+#define NUM_REPLICATES 1
+#define NUM_TOKENS 8
+#define NUM_SECONDS 60
 
 using namespace Enki;
 using namespace std;
@@ -119,7 +128,7 @@ vector<Bot*> rouletteWheelSelection(vector<Bot*> population, int newPopulationSi
     return newPopulation;
 }
 
-tuple<double, double> runGroup(vector<Bot*> bots, int numTokens, int seconds, double benefit, double cost) {
+tuple<double, double> runGroup(vector<Bot*> bots, double benefit, double cost) {
 
     // Generate the world
     auto world = new World(100, 100, Color(0.2, 0.2, 0.2));
@@ -138,8 +147,8 @@ tuple<double, double> runGroup(vector<Bot*> bots, int numTokens, int seconds, do
     }
 
     // Add tokens to the world
-    Token *tokens[numTokens];
-    for (int i = 0; i < numTokens; i++) {
+    Token *tokens[NUM_TOKENS];
+    for (int i = 0; i < NUM_TOKENS; i++) {
         auto *token = new Token();
         token->pos = Point(posDist(mt), posDist(mt));
         world->addObject(token);
@@ -147,15 +156,15 @@ tuple<double, double> runGroup(vector<Bot*> bots, int numTokens, int seconds, do
     }
 
     // Run the world for the specified number of seconds
-    const double timeStep = 0.1;
-    for (auto i = 0; i < (int) round(seconds / timeStep); i++) {
+    const double timeStep = 0.5;
+    for (auto i = 0; i < (int) round(NUM_SECONDS / timeStep); i++) {
         world->step(timeStep);
     }
 
     // Determine fitness score for each bot
     int numTokensVisited = 0;
     int numTokensShared = 0;
-    for (int i = 0; i < numTokens; i++) {
+    for (int i = 0; i < NUM_TOKENS; i++) {
 
         int status = tokens[i]->getStatus();
         if (status == shared) {
@@ -172,8 +181,8 @@ tuple<double, double> runGroup(vector<Bot*> bots, int numTokens, int seconds, do
         }
     }
 
-    double efficiency = numTokensVisited / (double) numTokens;
-    double altruism = numTokensShared / (double) numTokens;
+    double efficiency = numTokensVisited / (double) NUM_TOKENS;
+    double altruism = numTokensShared / (double) NUM_TOKENS;
 
     return make_tuple(efficiency, altruism);
 }
@@ -231,41 +240,67 @@ vector<Bot*> createGroup(Relatedness r, vector<Bot*> population) {
     return group;
 }
 
-tuple<double, double> runGeneration(vector<Bot*> prevPopulation, int numGroups, Relatedness r, double benefit, double cost) {
+tuple<double, double> runGeneration(vector<Bot*> prevPopulation, Relatedness r, double benefit, double cost) {
     vector<Bot*> population;
-    population.reserve((unsigned long) numGroups * 8);
+    population.reserve((unsigned long) NUM_GROUPS * 8);
     double averageEfficiency = 0.0;
     double averageAltruism = 0.0;
 
-    for (int i = 0; i < numGroups; i++) {
-        cout << "Group " << i << endl;
+    for (int i = 0; i < NUM_GROUPS; i++) {
         vector<Bot*> group = createGroup(r, prevPopulation);
         population.insert(population.end(), group.begin(), group.end());
         double efficiency, altruism;
-        tie(efficiency, altruism) = runGroup(group, 8, 60, benefit, cost);
-        averageEfficiency += efficiency / numGroups;
-        averageAltruism += altruism / numGroups;
+        tie(efficiency, altruism) = runGroup(group, benefit, cost);
+        averageEfficiency += efficiency / NUM_GROUPS;
+        averageAltruism += altruism / NUM_GROUPS;
     }
 
     return make_tuple(averageEfficiency, averageAltruism);
 }
 
-int getNumBotsInPopulation(int numGroups, Relatedness r) {
+int getNumBotsInPopulation(Relatedness r) {
     int numBotsInPopulation;
     switch (r) {
         case r100:
-            numBotsInPopulation = numGroups;
+            numBotsInPopulation = NUM_GROUPS;
             break;
         case r75:
         case r50:
         case r25:
-            numBotsInPopulation = 3 * numGroups;
+            numBotsInPopulation = 3 * NUM_GROUPS;
             break;
         case r0:
-            numBotsInPopulation = 8 * numGroups;
+            numBotsInPopulation = 8 * NUM_GROUPS;
     }
     return numBotsInPopulation;
 };
+
+tuple<vector<double>, vector<double>> runExperiment(double cbRatio, Relatedness r) {
+    // Create initial population
+    vector<Bot *> population;
+    int numBotsInPopulation = getNumBotsInPopulation(r);
+    population.reserve((unsigned long) numBotsInPopulation);
+    for (int i = 0; i < numBotsInPopulation; i++) {
+        population.emplace_back(new Bot());
+    }
+
+    double benefit = 1 / (1 + cbRatio);
+    double cost = 1 - benefit;
+    vector<double> efficiencies;
+    vector<double> altruisms;
+    efficiencies.assign(NUM_GENERATIONS, 0.0);
+    altruisms.assign(NUM_GENERATIONS, 0.0);
+    for (int i = 0; i < NUM_REPLICATES; i++) {
+        for (unsigned long generation = 0; generation < NUM_GENERATIONS; generation++) {
+            double averageEfficiency, averageAltruism;
+            tie(averageEfficiency, averageAltruism) = runGeneration(population, r, benefit, cost);
+            efficiencies[generation] += averageEfficiency / NUM_REPLICATES;
+            altruisms[generation] += averageAltruism / NUM_REPLICATES;
+            population = rouletteWheelSelection(population, getNumBotsInPopulation(r));
+        }
+    }
+    return make_tuple(efficiencies, altruisms);
+}
 
 template<typename T>
 void writeToFile(ofstream &file, vector<T> data, bool endWithNewline) {
@@ -282,9 +317,6 @@ void writeToFile(ofstream &file, vector<T> data, bool endWithNewline) {
 int main(int argc, char *argv[]) {
 
     // Set experimental parameters
-    const int numGroups = 50;
-    const unsigned long numGenerations = 200;
-    const int numReplicates = 10;
     const Relatedness rs[5] = {r0, r25, r50, r75, r100};
     double cbRatios[5] = {0.01, 0.25, 0.54, 0.75, 1.0};
 
@@ -292,50 +324,38 @@ int main(int argc, char *argv[]) {
     ofstream file("data.csv");
 
     file << "treatment,";
-    vector<string> header(2 * numGenerations);
-    for (int generation = 0; generation < numGenerations; generation++) {
+    vector<string> header(2 * NUM_GENERATIONS);
+    for (int generation = 0; generation < NUM_GENERATIONS; generation++) {
         header[generation] = "efficiency" + to_string(generation);
-        header[generation + numGenerations] = "altruism" + to_string(generation);
+        header[generation + NUM_GENERATIONS] = "altruism" + to_string(generation);
     }
     writeToFile(file, header, true);
+
+    vector<string> treatments;
+    vector<future<tuple<vector<double>, vector<double>>>> futures;
 
     // Run the experiment, recording average efficiency and altruism for each generation
     auto start = chrono::high_resolution_clock::now();
     for (Relatedness r : rs) {
         for (double cbRatio : cbRatios) {
 
-            cout << "Treatment " << "r" << r << "cb" << cbRatio << endl;
+            stringstream ss;
+            ss << "r" << r << "cb" << cbRatio;
+            treatments.push_back(ss.str());
 
-            // Create initial population
-            vector<Bot *> population;
-            int numBotsInPopulation = getNumBotsInPopulation(numGroups, r);
-            population.reserve((unsigned long) numBotsInPopulation);
-            for (int i = 0; i < numBotsInPopulation; i++) {
-                population.emplace_back(new Bot());
-            }
-
-            double benefit = 1 / (1 + cbRatio);
-            double cost = 1 - benefit;
-            vector<double> efficiencies;
-            vector<double> altruisms;
-            efficiencies.assign(numGenerations, 0.0);
-            altruisms.assign(numGenerations, 0.0);
-            for (int i = 0; i < numReplicates; i++) {
-                cout << "Replicate " << i << endl;
-                for (unsigned long generation = 0; generation < numGenerations; generation++) {
-                    cout << "Generation " << generation << endl;
-                    double averageEfficiency, averageAltruism;
-                    tie(averageEfficiency, averageAltruism) = runGeneration(population, numGroups, r, benefit, cost);
-                    efficiencies[generation] += averageEfficiency / numReplicates;
-                    altruisms[generation] += averageAltruism / numReplicates;
-                    population = rouletteWheelSelection(population, getNumBotsInPopulation(numGroups, r));
-                }
-            }
-            file << "r" << r << "cb" << cbRatio << ",";
-            writeToFile(file, efficiencies, false);
-            writeToFile(file, altruisms, true);
+            futures.push_back(async(runExperiment, cbRatio, r));
         }
     }
+
+    for (int i = 0; i < treatments.size(); i++) {
+        file << treatments[i] << ",";
+        cout << "Treatment " << treatments[i] << endl;
+        vector<double> efficiencies, altruisms;
+        tie(efficiencies, altruisms) = futures[i].get();
+        writeToFile(file, efficiencies, false);
+        writeToFile(file, altruisms, true);
+    }
+
     auto stop = chrono::high_resolution_clock::now();
     cout << "Elapsed time: " << chrono::duration_cast<chrono::seconds>(stop - start).count() << endl;
     file.close();
