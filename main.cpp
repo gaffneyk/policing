@@ -282,9 +282,9 @@ void writeToFile(ofstream &file, vector<T> data, bool endWithNewline) {
 int main(int argc, char *argv[]) {
 
     // Set experimental parameters
-    const int numGroups = 200;
-    const unsigned long numGenerations = 1;
-    const int numReplicates = 1;
+    const int numGroups = 50;
+    const unsigned long numGenerations = 200;
+    const int numReplicates = 10;
     const Relatedness rs[5] = {r0, r25, r50, r75, r100};
     double cbRatios[5] = {0.01, 0.25, 0.54, 0.75, 1.0};
 
