@@ -24,11 +24,9 @@ void Token::collisionEvent(PhysicalObject *o) {
             if (bot->getShouldShareToken()) {
                 status = shared;
                 setColor(Color(0, 1, 0));
-//                cout << "Bot " << bot << " shared token " << this << endl;
             } else {
                 status = kept;
                 setColor(Color(1, 0, 0));
-//                cout << "Bot " << bot << " kept token " << this << endl;
             }
         } else if (bot != initialBotCollided) {
             // TODO: handle collision by different bot

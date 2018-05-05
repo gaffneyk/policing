@@ -10,79 +10,13 @@
 using namespace Enki;
 using namespace std;
 
-
-void runGroup(vector<Bot*> bots, int numTokens, int seconds, double benefit, double cost) {
-
-    // Generate the world
-    auto world = new World(100, 100, Color(0.2, 0.2, 0.2));
-
-    // Create uniform distributions for position and angle
-    random_device rd;
-    mt19937 mt(rd());
-    uniform_int_distribution<int> posDist(0, 100);
-    uniform_real_distribution<double> angleDist(-M_PI, M_PI);
-
-    // Add bots to the world
-    for (auto bot : bots) {
-        bot->pos = Point(posDist(mt), posDist(mt));
-        bot->angle = angleDist(mt);
-        world->addObject(bot);
-    }
-
-    // Add tokens to the world
-    Token *tokens[numTokens];
-    for (int i = 0; i < numTokens; i++) {
-        auto *token = new Token();
-        token->pos = Point(posDist(mt), posDist(mt));
-        world->addObject(token);
-        tokens[i] = token;
-    }
-
-    // Run the world for the specified number of seconds
-    const double timeStep = 0.1;
-    for (auto i = 0; i < (int) round(seconds / timeStep); i++) {
-        world->step(timeStep);
-    }
-
-    // Determine fitness score for each bot
-    for (int i = 0; i < numTokens; i++) {
-        int status = tokens[i]->getStatus();
-        if (status == shared) {
-            for (auto bot : bots) {
-                if (bot != tokens[i]->getInitialBotCollided()) {
-                    bot->increaseFitnessScore(cost / (bots.size() - 1));
-                }
-            }
-        } else if (status == kept) {
-            tokens[i]->getInitialBotCollided()->increaseFitnessScore(benefit);
-        }
-    }
-}
-
-vector<Bot*> createGroup100(Bot *bot) {
-    vector<Bot*> group;
-    group.reserve(8);
-    for (int i = 0; i < 8; i++) {
-        group.push_back(new Bot(*bot));
-    }
-    return group;
-}
-
-vector<Bot*> runFirstGeneration(int numGroups) {
-    vector<Bot*> population;
-    population.reserve((unsigned long) numGroups * 8);
-    for (int i = 0; i < numGroups; i++) {
-        cout << "Running group " << i << endl;
-        vector<Bot*> group = createGroup100(new Bot());
-        population.insert(population.end(), group.begin(), group.end());
-        runGroup(group, 8, 60, 0.1, 0.9);
-    }
-    return population;
-}
-
-void runGeneration() {
-
-}
+enum Relatedness {
+    r100,
+    r75,
+    r50,
+    r25,
+    r0
+};
 
 Bot* crossover(Bot *parent1, Bot *parent2) {
     double probability = 0.005;
@@ -142,9 +76,9 @@ void mutate(Bot* bot) {
     bot->getController()->setBinaryGenome(genome);
 }
 
-vector<Bot*> rouletteWheelSelection(vector<Bot*> population, unsigned long newPopulationSize) {
+vector<Bot*> rouletteWheelSelection(vector<Bot*> population, int newPopulationSize) {
     vector<Bot*> newPopulation;
-    newPopulation.reserve(newPopulationSize);
+    newPopulation.reserve((unsigned long) newPopulationSize);
 
     double sumFitness = 0;
     for (Bot *bot : population) {
@@ -182,17 +116,164 @@ vector<Bot*> rouletteWheelSelection(vector<Bot*> population, unsigned long newPo
     return newPopulation;
 }
 
+double runGroup(vector<Bot*> bots, int numTokens, int seconds, double benefit, double cost) {
+
+    // Generate the world
+    auto world = new World(100, 100, Color(0.2, 0.2, 0.2));
+
+    // Create uniform distributions for position and angle
+    random_device rd;
+    mt19937 mt(rd());
+    uniform_int_distribution<int> posDist(0, 100);
+    uniform_real_distribution<double> angleDist(-M_PI, M_PI);
+
+    // Add bots to the world
+    for (auto bot : bots) {
+        bot->pos = Point(posDist(mt), posDist(mt));
+        bot->angle = angleDist(mt);
+        world->addObject(bot);
+    }
+
+    // Add tokens to the world
+    Token *tokens[numTokens];
+    for (int i = 0; i < numTokens; i++) {
+        auto *token = new Token();
+        token->pos = Point(posDist(mt), posDist(mt));
+        world->addObject(token);
+        tokens[i] = token;
+    }
+
+    // Run the world for the specified number of seconds
+    const double timeStep = 0.1;
+    for (auto i = 0; i < (int) round(seconds / timeStep); i++) {
+        world->step(timeStep);
+    }
+
+    // Determine fitness score for each bot
+    int numTokensShared = 0;
+    for (int i = 0; i < numTokens; i++) {
+        int status = tokens[i]->getStatus();
+        if (status == shared) {
+            numTokensShared++;
+            for (auto bot : bots) {
+                if (bot != tokens[i]->getInitialBotCollided()) {
+                    bot->increaseFitnessScore(benefit / (bots.size() - 1));
+                }
+            }
+        } else if (status == kept) {
+            tokens[i]->getInitialBotCollided()->increaseFitnessScore(cost);
+        }
+    }
+
+    return numTokensShared / (double) numTokens;
+}
+
+vector<Bot*> createGroup(Relatedness r, vector<Bot*> population) {
+    vector<Bot*> group;
+    group.reserve(8);
+
+    switch (r) {
+        case r100:
+            for (int i = 0; i < 8; i++) {
+                group.push_back(new Bot(*population.back()));
+            }
+            break;
+        case r75:
+            group.push_back(new Bot(*population.back()));
+            population.pop_back();
+            for (int i = 0; i < 7; i++) {
+                group.push_back(new Bot(*population.back()));
+            }
+            population.pop_back();
+            break;
+        case r50:
+            group.push_back(new Bot(*population.back()));
+            population.pop_back();
+            group.push_back(new Bot(*population.back()));
+            population.pop_back();
+            for (int i = 0; i < 6; i++) {
+                group.push_back(new Bot(*population.at(2)));
+            }
+            population.pop_back();
+            break;
+        case r25:
+            for (int i = 0; i < 2; i++) {
+                group.push_back(new Bot(*population.back()));
+            }
+            population.pop_back();
+            for (int i = 0; i < 3; i++) {
+                group.push_back(new Bot(*population.back()));
+            }
+            population.pop_back();
+            for (int i = 0; i < 3; i++) {
+                group.push_back(new Bot(*population.back()));
+            }
+            population.pop_back();
+            break;
+        case r0:
+            for (unsigned long i = 0; i < 8; i++) {
+                group.push_back(new Bot(*population.back()));
+                population.pop_back();
+            }
+            break;
+    }
+
+    return group;
+}
+
+vector<Bot*> runGeneration(vector<Bot*> prevPopulation, int numGroups, Relatedness r, double benefit, double cost) {
+    vector<Bot*> population;
+    population.reserve((unsigned long) numGroups * 8);
+    double averageAltruism = 0.0;
+
+    for (int i = 0; i < numGroups; i++) {
+        cout << "Running group " << i << endl;
+
+        vector<Bot*> group = createGroup(r, prevPopulation);
+        prevPopulation.pop_back();
+        population.insert(population.end(), group.begin(), group.end());
+        double altruism = runGroup(group, 8, 60, benefit, cost);
+        averageAltruism += altruism / numGroups;
+    }
+
+    cout << "Average altruism: " << averageAltruism << endl;
+    int numBotsNextPopulation = 0;
+
+    switch (r) {
+        case r100:
+            numBotsNextPopulation = numGroups;
+            break;
+        case r75:
+        case r50:
+        case r25:
+            numBotsNextPopulation = 3 * numGroups;
+            break;
+        case r0:
+            numBotsNextPopulation = 8 * numGroups;
+    }
+    vector<Bot*> nextPopulation = rouletteWheelSelection(population, numBotsNextPopulation);
+    return nextPopulation;
+}
+
 int main(int argc, char *argv[]) {
 
-    vector<Bot*> population = runFirstGeneration(10);
-    vector<Bot*> newPopulation = rouletteWheelSelection(population, 10);
-    for (Bot *bot : newPopulation) {
-        cout << bot->getFitnessScore() << endl;
+    const int numGroups = 10;
+    const int numGenerations = 10;
+
+    vector<Bot*> population;
+    population.reserve(numGroups);
+
+    for (int i = 0; i < numGroups; i++) {
+        population.emplace_back(new Bot());
+    }
+
+    for (int generation = 0; generation < numGenerations; generation++) {
+        cout << "Running generation " << generation << endl;
+        population = runGeneration(population, numGroups, r100, 0.9, 0.1);
     }
 
 //    QApplication app(argc, argv);
 //    ViewerWidget viewer(world);
 //    viewer.show();
 //    app.exec();
-
 }
