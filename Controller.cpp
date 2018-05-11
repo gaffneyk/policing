@@ -39,14 +39,14 @@ void Controller::control(double leftCameraValueR, double leftCameraValueG, doubl
                          + genome[9 + i] * rightCameraValueR
                          + genome[12 + i] * rightCameraValueG
                          + genome[15 + i] * rightCameraValueB
-                         + genome[27 + i]);
+                         - genome[27 + i]);
     }
 
     for (int i = 0; i < 3; i++) {
         controls[i] = tanh(genome[18 + i] * hidden[0]
                            + genome[21 + i] * hidden[1]
                            + genome[24 + i] * hidden[2]
-                           + genome[30 + i]);
+                           - genome[30 + i]);
     }
 }
 

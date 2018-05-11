@@ -11,7 +11,7 @@ using namespace std;
 Bot::Bot():
         EPuck(CAPABILITY_BASIC_SENSORS | CAPABILITY_CAMERA) {
     controller = new Controller();
-    setColor(Color(0.2, 0.2, 0.2));
+    setColor(Color(0.5, 0.5, 0.5));
     fitnessScore = 0;
 };
 

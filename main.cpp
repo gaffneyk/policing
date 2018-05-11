@@ -8,16 +8,16 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
-//#include <pthread.h>
 #include <future>
 #include "Bot.h"
 #include "Token.h"
 
-#define NUM_GROUPS 5
-#define NUM_GENERATIONS 1
+#define NUM_GROUPS 50
+#define NUM_GENERATIONS 100
 #define NUM_REPLICATES 1
 #define NUM_TOKENS 8
 #define NUM_SECONDS 60
+#define NUM_EVALUATIONS 10
 
 using namespace Enki;
 using namespace std;
@@ -131,7 +131,7 @@ vector<Bot*> rouletteWheelSelection(vector<Bot*> population, int newPopulationSi
 tuple<double, double> runGroup(vector<Bot*> bots, double benefit, double cost) {
 
     // Generate the world
-    auto world = new World(100, 100, Color(0.2, 0.2, 0.2));
+    auto world = new World(300, 300, Color(0.5, 0.5, 0.5));
 
     // Create uniform distributions for position and angle
     random_device rd;
@@ -182,57 +182,57 @@ tuple<double, double> runGroup(vector<Bot*> bots, double benefit, double cost) {
     }
 
     double efficiency = numTokensVisited / (double) NUM_TOKENS;
-    double altruism = numTokensShared / (double) NUM_TOKENS;
+    double altruism = numTokensShared / (double) numTokensVisited;
 
     return make_tuple(efficiency, altruism);
 }
 
-vector<Bot*> createGroup(Relatedness r, vector<Bot*> population) {
+vector<Bot*> createGroup(Relatedness r, vector<Bot*> *population) {
     vector<Bot*> group;
     group.reserve(8);
 
     switch (r) {
         case r100:
             for (int i = 0; i < 8; i++) {
-                group.push_back(new Bot(*population.back()));
+                group.push_back(new Bot(*population->back()));
             }
             break;
         case r75:
-            group.push_back(new Bot(*population.back()));
-            population.pop_back();
+            group.push_back(new Bot(*population->back()));
+            population->pop_back();
             for (int i = 0; i < 7; i++) {
-                group.push_back(new Bot(*population.back()));
+                group.push_back(new Bot(*population->back()));
             }
-            population.pop_back();
+            population->pop_back();
             break;
         case r50:
-            group.push_back(new Bot(*population.back()));
-            population.pop_back();
-            group.push_back(new Bot(*population.back()));
-            population.pop_back();
+            group.push_back(new Bot(*population->back()));
+            population->pop_back();
+            group.push_back(new Bot(*population->back()));
+            population->pop_back();
             for (int i = 0; i < 6; i++) {
-                group.push_back(new Bot(*population.back()));
+                group.push_back(new Bot(*population->back()));
             }
-            population.pop_back();
+            population->pop_back();
             break;
         case r25:
             for (int i = 0; i < 2; i++) {
-                group.push_back(new Bot(*population.back()));
+                group.push_back(new Bot(*population->back()));
             }
-            population.pop_back();
+            population->pop_back();
             for (int i = 0; i < 3; i++) {
-                group.push_back(new Bot(*population.back()));
+                group.push_back(new Bot(*population->back()));
             }
-            population.pop_back();
+            population->pop_back();
             for (int i = 0; i < 3; i++) {
-                group.push_back(new Bot(*population.back()));
+                group.push_back(new Bot(*population->back()));
             }
-            population.pop_back();
+            population->pop_back();
             break;
         case r0:
             for (unsigned long i = 0; i < 8; i++) {
-                group.push_back(new Bot(*population.back()));
-                population.pop_back();
+                group.push_back(new Bot(*population->back()));
+                population->pop_back();
             }
             break;
     }
@@ -240,14 +240,13 @@ vector<Bot*> createGroup(Relatedness r, vector<Bot*> population) {
     return group;
 }
 
-tuple<double, double> runGeneration(vector<Bot*> prevPopulation, Relatedness r, double benefit, double cost) {
-    vector<Bot*> population;
-    population.reserve((unsigned long) NUM_GROUPS * 8);
+tuple<double, double, vector<Bot*>> runGeneration(vector<Bot*> prevPopulation, Relatedness r, double benefit, double cost) {
     double averageEfficiency = 0.0;
     double averageAltruism = 0.0;
+    vector<Bot*> population;
 
     for (int i = 0; i < NUM_GROUPS; i++) {
-        vector<Bot*> group = createGroup(r, prevPopulation);
+        vector<Bot*> group = createGroup(r, &prevPopulation);
         population.insert(population.end(), group.begin(), group.end());
         double efficiency, altruism;
         tie(efficiency, altruism) = runGroup(group, benefit, cost);
@@ -255,11 +254,11 @@ tuple<double, double> runGeneration(vector<Bot*> prevPopulation, Relatedness r, 
         averageAltruism += altruism / NUM_GROUPS;
     }
 
-    return make_tuple(averageEfficiency, averageAltruism);
+    return make_tuple(averageEfficiency, averageAltruism, population);
 }
 
 int getNumBotsInPopulation(Relatedness r) {
-    int numBotsInPopulation;
+    int numBotsInPopulation = 0;
     switch (r) {
         case r100:
             numBotsInPopulation = NUM_GROUPS;
@@ -290,10 +289,11 @@ tuple<vector<double>, vector<double>> runExperiment(double cbRatio, Relatedness 
     vector<double> altruisms;
     efficiencies.assign(NUM_GENERATIONS, 0.0);
     altruisms.assign(NUM_GENERATIONS, 0.0);
+
     for (int i = 0; i < NUM_REPLICATES; i++) {
         for (unsigned long generation = 0; generation < NUM_GENERATIONS; generation++) {
             double averageEfficiency, averageAltruism;
-            tie(averageEfficiency, averageAltruism) = runGeneration(population, r, benefit, cost);
+            tie(averageEfficiency, averageAltruism, population) = runGeneration(population, r, benefit, cost);
             efficiencies[generation] += averageEfficiency / NUM_REPLICATES;
             altruisms[generation] += averageAltruism / NUM_REPLICATES;
             population = rouletteWheelSelection(population, getNumBotsInPopulation(r));
